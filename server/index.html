@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ReserApp - Crystal Challenge</title>
+    <!-- Bootstrap CSS -->
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+    />
+    <!-- CSS personalizado -->
+    <style>
+      .container {
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        height: 40vh;
+      }
+
+      .box {
+        width: 150px;
+        height: 150px;
+        transition: background-color 0.1s ease;
+        border-radius: 10px;
+      }
+
+      .blue {
+        background-color: #00a6fb;
+      }
+
+      .gray {
+        background-color: gray;
+      }
+
+      .yellow {
+        background-color: #f4d35e;
+      }
+
+      .red {
+        background-color: #bf4342;
+      }
+
+      .active.red {
+        background-color: #8c1c13;
+        transition: background-color 0.1s ease;
+      }
+
+      .active.blue {
+        background-color: #006494;
+        transition: background-color 0.1s ease;
+      }
+
+      .active.gray {
+        background-color: darkgray;
+        transition: background-color 0.1s ease;
+      }
+
+      .active.yellow {
+        background-color: #ee964b;
+        transition: background-color 0.1s ease;
+      }
+
+      body {
+        background-image: url("https://iceberg.digital/wp-content/uploads/2015/08/iceberg_2000x.jpg");
+        background-size: cover; /* para cubrir toda la pantalla */
+        background-position: center; /* para centrar la imagen */
+        rotate: 360;
+      }
+
+      .logo {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      margin: 10px; /* Ajusta el margen según sea necesario */
+      max-width: 100px;
+    }
+    </style>
+  </head>
+
+  <body>
+    <img src="https://github.com/dtarenas/VeterinaryEsp/assets/42014718/00bc2a02-7ee8-4bea-a2bd-b43d56dff5d3" alt="Fondo de página" class="logo">
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-12">
+          <h1>Crystal Challenge</h1>
+        </div>
+        <div class="col-sm-12">
+          <h4 id="level">Level 1</h3>
+        </div>
+        <div class="col-sm-12">
+          <h6 id="attemp">Attemp: 0</h3>
+        </div>
+      </div>
+      <div class="container">
+        <div class="box blue"></div>
+        <div class="box gray"></div>
+        <div class="box yellow"></div>
+        <div class="box red"></div>
+      </div>
+    </div>
+    <div class="col-12">
+      <div class="text-center">
+        <h1 id="counter">&nbsp</h1>
+      </div>
+    </div>
+    <div class="container">
+      <div class="row">
+        <div class="col-12 mb-3 text-center">
+          <h1 id="timer">00:00:00</h1>
+          <button class="btn btn-warning" id="startBtn">Iniciar</button>
+          <button class="btn btn-danger" id="stopBtn">Detener</button>
+          <button class="btn btn-dark" id="resetBtn">Reiniciar</button>
+        </div>
+        <div class="col-12">
+          <div class="card border-light mb-3">
+            <div class="card-header">Information</div>
+            <div class="card-body">
+              <h5 class="card-title">Title</h5>
+              <p class="card-text">Content...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js" charset="UTF-8"></script>
+    <script>
+      let level = 1;
+      let attemps = 0;
+      let timerInterval;
+      let milliseconds = 0;
+      let seconds = 0;
+      let minutes = 0;
+
+      const socket = io();
+      const colors = {
+        2: { color: "red", tone: 700 },
+        3: { color: "yellow", tone: 800 },
+        4: { color: "gray", tone: 900 },
+        5: { color: "blue", tone: 1000 },
+      };
+      /* Timer */
+      const initTimer = () => {
+        const timerDisplay = document.getElementById("timer");
+        const startBtn = document.getElementById("startBtn");
+        const stopBtn = document.getElementById("stopBtn");
+        const resetBtn = document.getElementById("resetBtn");
+
+        function startTimer() {
+          timerInterval = setInterval(() => {
+            milliseconds++;
+            if (milliseconds === 100) {
+              milliseconds = 0;
+              seconds++;
+              if (seconds === 60) {
+                seconds = 0;
+                minutes++;
+              }
+            }
+            displayTime();
+          }, 10);
+        }
+
+        function stopTimer() {
+          clearInterval(timerInterval);
+        }
+
+        function resetTimer() {
+          clearInterval(timerInterval);
+          milliseconds = 0;
+          seconds = 0;
+          minutes = 0;
+          displayTime();
+        }
+
+        function displayTime() {
+          const formattedTime = `${formatTime(minutes)}:${formatTime(
+            seconds
+          )}:${formatMilliseconds(milliseconds)}`;
+          timerDisplay.textContent = formattedTime;
+        }
+
+        function formatTime(time) {
+          return time < 10 ? `0${time}` : time;
+        }
+
+        function formatMilliseconds(milliseconds) {
+          return milliseconds < 10 ? `0${milliseconds}` : milliseconds;
+        }
+
+        startBtn.addEventListener("click", startTimer);
+        stopBtn.addEventListener("click", stopTimer);
+        resetBtn.addEventListener("click", resetTimer);
+      };
+
+      async function playTone(frequency, duration) {
+        const audioContext = new (window.AudioContext ||
+          window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        oscillator.type = "sine"; // Cambia el tipo de onda a 'sine' (senoidal)
+        oscillator.frequency.setValueAtTime(
+          frequency,
+          audioContext.currentTime
+        );
+        oscillator.connect(audioContext.destination);
+        oscillator.start();
+
+        await esperarTiempo(duration);
+        oscillator.stop();
+        audioContext.close();
+      }
+
+      const handleColor = (colorValue) => {
+        const colorClass = colors[colorValue];
+        if (colorClass) {
+          const box = document.querySelector(`.box.${colorClass.color}`);
+          box.classList.add("active");
+          playTone(colorClass.tone, 200);
+          if (box) {
+            setTimeout(() => {
+              box.classList.remove("active");
+            }, 200);
+          }
+        }
+      };
+
+      const updateCard = (header, title, content, borderClass = "info") => {
+        document.querySelector(".card-header").innerHTML = header;
+        document.querySelector(".card-title").textContent = title;
+        document.querySelector(".card-text").textContent = content;
+        const card = document.querySelector(".card");
+        const cardBody = document.querySelector(".card-body");
+
+        card.classList.remove(
+          "border-info",
+          "border-warning",
+          "border-success",
+          "border-light",
+          "border-danger"
+        );
+
+        cardBody.classList.add(`border-${borderClass}`);
+
+        cardBody.classList.remove(
+          "text-info",
+          "text-warning",
+          "text-success",
+          "text-light",
+          "text-danger"
+        );
+
+        card.classList.add(`text-${borderClass}`);
+      };
+
+      const updateLevel = () => {
+        const levelText = document.querySelector("#level");
+        levelText.innerHTML = `Level: ${level}`;
+      };
+
+      function esperarTiempo(milisegundos) {
+        return new Promise((resolve) => {
+          setTimeout(() => {
+            resolve(); // Resuelve la promesa después del tiempo especificado
+          }, milisegundos);
+        });
+      }
+
+      /* Play the winning sound */
+      const playWinningSound = async () => {
+        await playTone(2000, 100);
+        await playTone(2500, 100);
+        await playTone(3000, 100);
+        await playTone(3500, 100);
+        await playTone(4000, 400);
+      };
+
+      /* Play failing sound */
+      const playFailingSound = async () => {
+        const Tono = [260, 200, 200, 220, 200, 0, 250, 260];
+        const duracionNotas = [4, 8, 8, 4, 4, 4, 4, 4];
+        for (let i = 0; i < 8; i++) {
+          const duracionNota = 1000 / duracionNotas[i];
+          await playTone(Tono[i] * 10, duracionNota * 1.1);
+        }
+      };
+
+      updateCard("Info", "Ready to play", "Try a new attemp", "info");
+      initTimer();
+      updateLevel();
+
+      socket.on("arduino:data", (data) => {
+        console.log(data);
+        const counter = document.querySelector("#counter");
+
+        if (data.value === "1") {
+          updateCard("Info", "Playing", "Good luck", "warning");
+          let count = 4;
+          const countdownInterval = setInterval(() => {
+            count--;
+            if (count >= 1) {
+              playTone(1500, 600);
+              counter.textContent = count;
+            } else {
+              playTone(3000, 800);
+              counter.textContent = "Go Go Go!!!";
+              clearInterval(countdownInterval);
+            }
+          }, 1000);
+        }
+
+        handleColor(data.value);
+
+        if (data.value === "8") {
+          level++;
+          attemps = 0;
+          updateLevel();
+          updateCard("Great", "Win", "Good job!", "success");
+          playWinningSound();
+          counter.innerHTML = "Good job!";
+
+          const attempText = document.querySelector("#attemp");
+          attempText.innerHTML = `Attemp: ${attemps}`; 
+        } else if (data.value === "7") {
+          attemps++;
+          playFailingSound();
+          updateCard("Wrong", "Oops!", "Try it again", "danger");
+          counter.innerHTML = "Oops!";
+          if(attemps %2 === 0){
+            minutes++;
+          }
+
+          const attempText = document.querySelector("#attemp");
+          attempText.innerHTML = `Attemp: ${attemps}`;
+        }
+      });
+    </script>
+  </body>
+</html>
