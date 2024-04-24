@@ -29,6 +29,6 @@
 
 ![image](https://github.com/dtarenas/CrystalGame/assets/42014718/fc626e44-2eba-4c53-b5fc-e01b0ba4622c)
 
+#### Simulation
+![Untitled2](https://github.com/dtarenas/CrystalGame/assets/42014718/df05a0a3-7877-40b6-b778-3478efb3aefe)
 
-
-     
